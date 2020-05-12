@@ -5,6 +5,7 @@
 #include "ark_transactions.hpp"
 #include "configuration.hpp"
 #include "hardware/display.hpp"
+#include "hardware/eeprom.hpp"
 #include "hardware/gps.hpp"
 #include "hardware/mqtt.hpp"
 #include "rental.hpp"
@@ -30,7 +31,8 @@ extern bool WiFi_status;
  * Set scooter variables.
  ******************************************************************************/
 void setScooterVars(const char *rateStr, uint64_t rate64, uint8_t timeZone,
-                    uint8_t dst, EspMQTTClient *client);
+                    uint8_t dst, EspMQTTClient *client,
+                    Ark::Client::Connection<Ark::Client::Api> &connection);
 
 /*******************************************************************************
  * This function is called once WiFi and MQTT connections are complete.

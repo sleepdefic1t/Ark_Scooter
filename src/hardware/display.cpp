@@ -244,7 +244,7 @@ void UpdateDisplayTime() {
       // update the display only if time has changed (updates every minute)
       prevDisplayMinute = timeinfo->tm_min;
 
-      Serial.print("time is: ");
+      Serial.print("\ntime is: ");
       Serial.println(now);
 
       char formattedTime[30];

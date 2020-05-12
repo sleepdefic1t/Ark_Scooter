@@ -33,27 +33,14 @@
 
 #include <Arduino.h>
 
-#include "EspMQTTClient.h"
 #include "ark_scooters.hpp"
 #include "secrets.hpp"
 
 /*******************************************************************************
- * If reprogramming a new wallet address into an already-used ESP32 module,
- * Flash storage--which contains the Wallets 'Nonce'--needs erased first.
- *
- * - 1. Define ERASE_FLASH in secrets.hpp
- * - 2. Download firmware
- * - 3. undefine ERASE_FLASH and reprogram
- ******************************************************************************/
-#ifdef ERASE_FLASH
-clearEEPROM();
-while (true) {
-}
-#endif
-
-/*******************************************************************************
  * Mqtt Client
  ******************************************************************************/
+ #include "EspMQTTClient.h"
+
 static EspMQTTClient WiFiMQTTclient(
     WIFI_SSID, WIFI_PASS,
     MQTT_SERVER_IP,    // MQTT Broker server ip
@@ -63,10 +50,30 @@ static EspMQTTClient WiFiMQTTclient(
     MQTT_SERVER_PORT   // The MQTT port, default: 1883. this line can be omitted
 );
 
+
+/*******************************************************************************
+ * Create a Blockchain API connection
+ ******************************************************************************/
+#include <arkClient.h>
+
+Ark::Client::Connection<Ark::Client::Api> connection(ARK_PEER, ARK_PORT);
+
 /*******************************************************************************
  * MAIN SETUP
  ******************************************************************************/
 void setup() {
+  /*******************************************************************************
+   * If reprogramming a new wallet address into an already-used ESP32 module,
+   * Flash storage--which contains the Wallets 'Nonce'--needs erased first.
+   *
+   * - 1. Define ERASE_FLASH in secrets.hpp
+   * - 2. Download firmware
+   * - 3. undefine ERASE_FLASH and reprogram
+   ******************************************************************************/
+#ifdef ERASE_FLASH
+  clearEEPROM();
+#endif
+
   Serial.begin(115200);  // Initialize Serial Connection for debug
   while (!Serial && millis() < 20) {
     Serial.print(".");
@@ -111,9 +118,9 @@ void setup() {
   GPSSerial.println(PMTK_Q_RELEASE);
 
   setConfiguration(BRIDGECHAIN_NETHASH, BRIDGECHAIN_SLIP44, BRIDGECHAIN_WIF,
-                   BRIDGECHAIN_VERSION, BRIDGECHAIN_EPOCH, ARK_PEER, ARK_PORT);
+                   BRIDGECHAIN_VERSION, BRIDGECHAIN_EPOCH);
   setScooterVars(RENTAL_RATE_STR, RENTAL_RATE_UINT64, TIME_ZONE, DST,
-                 &WiFiMQTTclient);
+                 &WiFiMQTTclient, connection);
   setStateMachineVars(ARK_ADDRESS, RENTAL_RATE_STR, RENTAL_RATE_UINT64);
   setTransactionVars(ARK_ADDRESS, PASSPHRASE, TYPE_0_FEE);
 }
@@ -123,7 +130,7 @@ void setup() {
  * ******************************************************************************/
 void loop() {
   // Process state machine
-  StateMachine();
+  StateMachine(connection);
 
   // Handle the WiFi and MQTT connections
   WiFiMQTTclient.loop();

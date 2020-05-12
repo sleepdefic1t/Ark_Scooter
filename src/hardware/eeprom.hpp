@@ -12,11 +12,9 @@ int loadEEPROM();
  ******************************************************************************/
 void saveEEPROM(int RXpage);
 
-#ifdef ERASE_FLASH
 /*******************************************************************************
  * Clear data in nonvolatile memory.
  ******************************************************************************/
 void clearEEPROM();
-#endif
 
 #endif  // ARK_SCOOTERS_HARDWARE_EEPROM_HPP

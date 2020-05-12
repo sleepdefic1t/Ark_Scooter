@@ -154,7 +154,8 @@ void send_MQTTpacket(int batteryPercent, const char *rentalStatus,
              isValid ? "true" : "false");
       Serial.printf("\nmessage that was signed: %s", msgbackup);
 
-      Serial.printf("\nsend_MQTTpacket: %s", buf);
+      Serial.printf("\nsend_MQTTpacket: ");
+      Serial.println(buf);
 
       client.publish(mqttBaseTopic, buf.c_str());
     }

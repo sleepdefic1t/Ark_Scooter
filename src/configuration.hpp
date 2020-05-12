@@ -10,14 +10,10 @@ extern Network BridgechainNetwork;
 // Load the Custom Network Configuration
 extern Configuration cfg;
 
-// create ARK blockchain connection
-extern Ark::Client::Connection<Ark::Client::Api> connection;
-
 /*******************************************************************************
  * Set configuration.
  ******************************************************************************/
 void setConfiguration(const char *nethash, uint8_t slip44, uint8_t wif,
-                      uint8_t version, const char *epoch, const char *peer,
-                      int port);
+                      uint8_t version, const char *epoch);
 
 #endif  // ARK_SCOOTERS_CONFIGURATION_H

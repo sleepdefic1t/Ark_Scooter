@@ -35,17 +35,20 @@ uint64_t _scooterRate64 = 0ULL;
 uint8_t _timeZone = 0U;
 uint8_t _dst = 0U;
 EspMQTTClient *_client;
+Ark::Client::Connection<Ark::Client::Api> *_connection;
 
 /*******************************************************************************
  * Set scooter variables.
  ******************************************************************************/
 void setScooterVars(const char *rateStr, uint64_t rate64, uint8_t timeZone,
-                    uint8_t dst, EspMQTTClient *client) {
+                    uint8_t dst, EspMQTTClient *client,
+                    Ark::Client::Connection<Ark::Client::Api> &connection) {
   strcpy(_scooterRateStr, rateStr);
   _scooterRate64 = rate64;
   _timeZone = timeZone;
   _dst = dst;
   _client = client;
+  _connection = &connection;
 }
 
 /*******************************************************************************
@@ -54,6 +57,8 @@ void setScooterVars(const char *rateStr, uint64_t rate64, uint8_t timeZone,
  * This is a callback function from the Mqtt Library.
  *******************************************************************************/
 void onConnectionEstablished() {
+  // execute this the first time we have established a WiFi and MQTT connection
+  // after powerup
   if (!initialConnectionEstablished_Flag) {
     // execute this the first time we have established a WiFi and MQTT
     // connection after powerup
@@ -64,19 +69,17 @@ void onConnectionEstablished() {
     // TODO: Improve
     configTime(_timeZone * 3600, _dst, "pool.ntp.org", "time.nist.gov");
 
-    Serial.printf("\nIP address: %s", WiFi.localIP());
+    Serial.printf("\nIP address: ");
+    Serial.println(WiFi.localIP());
 
     // update WiFi and MQTT connection status bar
     UpdateWiFiConnectionStatus(_client->isWifiConnected(), WiFi_status);
     UpdateMQTTConnectionStatus(MQTT_status, *_client);
 
-    // --------------------------------------------
-    // query Ark Node to see if it is synced
-    // we need some error handling here!!!!!!  What do we do if there is no ark
-    // node connected? if (checkArkNodeStatus()) {
-
     // Retrieve Wallet Nonce and Balance
-    getWallet();
+    if (!getWallet(*_connection)) {
+      return;
+    }
 
     // Copy data stored in Flash into RAM
     bridgechainWallet.lastRXpage =
@@ -88,12 +91,12 @@ void onConnectionEstablished() {
     // Parse the wallet looking for the last received transaction
     // lastRXpage is equal to the page number of the last received transaction
     // in the wallet.
-    bridgechainWallet.lastRXpage =
-        getMostRecentReceivedTransaction(bridgechainWallet.lastRXpage + 1);
+    bridgechainWallet.lastRXpage = getMostRecentReceivedTransaction(
+        *_connection, bridgechainWallet.lastRXpage + 1);
     saveEEPROM(bridgechainWallet.lastRXpage);
 
     // query Ark Node to see if it is synced and update status bar
-    UpdateArkNodeConnectionStatus(checkArkNodeStatus(), ARK_status);
+    UpdateArkNodeConnectionStatus(checkArkNodeStatus(*_connection), ARK_status);
 
     scooterRental.rentalRate_Uint64 = _scooterRate64;
     strcpy(scooterRental.rentalRate, _scooterRateStr);

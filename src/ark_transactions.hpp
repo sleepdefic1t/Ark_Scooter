@@ -5,6 +5,8 @@
 #ifndef ARK_SCOOTERS_TRANSACTIONS_ARK_TRANSACTIONS_HPP
 #define ARK_SCOOTERS_TRANSACTIONS_ARK_TRANSACTIONS_HPP
 
+#include <arkClient.h>
+
 #include <cstdint>
 
 /*******************************************************************************
@@ -20,26 +22,27 @@ void setTransactionVars(const char *address, const char *passphrase,
  * https://arduinojson.org/v6/api/jsondocument/
  * https://arduinojson.org/v6/assistant/
  ********************************************************************************/
-bool checkArkNodeStatus();
+bool checkArkNodeStatus(Ark::Client::Connection<Ark::Client::Api> &connection);
 
 /*******************************************************************************
  * This routine retrieves the current nonce and the balance for the wallet
  ******************************************************************************/
-void getWallet();
+bool getWallet(Ark::Client::Connection<Ark::Client::Api> &connection);
 
 /*******************************************************************************
  * This routine polls the ARK Node API for the RentalStart custom transaction.
  * It polls once every 8 seconds When polling the API we set the limit.
  ******************************************************************************/
-int search_RentalStartTx();
+int search_RentalStartTx(Ark::Client::Connection<Ark::Client::Api> &connection);
 
 /*******************************************************************************
  * This routine retrieves 1 received transaction in wallet if available.
  ******************************************************************************/
-int GetReceivedTransaction(const char *const address, int page, const char *&id,
-                           const char *&amount, const char *&senderAddress,
-                           const char *&senderPublicKey,
-                           const char *&vendorField);
+int GetReceivedTransaction(
+    Ark::Client::Connection<Ark::Client::Api> &connection,
+    const char *const address, int page, const char *&id, const char *&amount,
+    const char *&senderAddress, const char *&senderPublicKey,
+    const char *&vendorField);
 
 /*******************************************************************************
  * This routine will search through all the received transactions of ArkAddress
@@ -47,7 +50,8 @@ int GetReceivedTransaction(const char *const address, int page, const char *&id,
  *
  * The routine returns the page number of the most recent transaction.
  ******************************************************************************/
-int getMostRecentReceivedTransaction(int page = 1);
+int getMostRecentReceivedTransaction(
+    Ark::Client::Connection<Ark::Client::Api> &connection, int page = 1);
 
 /*******************************************************************************
  * This routine retrieves 1 RentalStart transaction if available in wallet
@@ -55,6 +59,7 @@ int getMostRecentReceivedTransaction(int page = 1);
  * Pass wallet address and page to function
  ******************************************************************************/
 int GetTransaction_RentalStart(
+    Ark::Client::Connection<Ark::Client::Api> &connection,
     const char *const address, int page, const char *&id, const char *&amount,
     const char *&senderAddress, const char *&senderPublicKey,
     const char *&vendorField, const char *&asset_gps_latitude,
@@ -64,11 +69,13 @@ int GetTransaction_RentalStart(
 /*******************************************************************************
  * Send a Rental Finish Custom BridgeChain transaction
  ******************************************************************************/
-void SendTransaction_RentalFinish();
+void SendTransaction_RentalFinish(
+    Ark::Client::Connection<Ark::Client::Api> &connection);
 
 /*******************************************************************************
  * Send a BridgeChain transaction, tailored for a custom network.
  ******************************************************************************/
-void sendBridgechainTransaction();
+void sendBridgechainTransaction(
+    Ark::Client::Connection<Ark::Client::Api> &connection);
 
 #endif  // ARK_SCOOTERS_TRANSACTIONS_ARK_TRANSACTIONS_HPP

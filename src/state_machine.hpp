@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+#include <arkClient.h>
+
 /*******************************************************************************
  * State Machine
  ******************************************************************************/
@@ -32,7 +34,7 @@ void setStateMachineVars(const char *address, const char *rateStr,
  * Mealy Finite State Machine
  * The state machine logic is executed once each cycle of the "main" loop.
  ******************************************************************************/
-void StateMachine();
+void StateMachine(Ark::Client::Connection<Ark::Client::Api> &connection);
 
 /*******************************************************************************
  * unlock the scooter

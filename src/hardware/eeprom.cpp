@@ -35,7 +35,7 @@ int loadEEPROM() {
     RXpage = 0;
   }
 
-  Serial.printf("\nRecovered RXpage '%d' from FLASH: %s | ", RXpage, ok);
+  Serial.printf("\n\nRecovered RXpage '%d' from FLASH: %s\n\n", RXpage, ok);
 
   return RXpage;
 }
@@ -59,10 +59,9 @@ void saveEEPROM(int RXpage) {
 
   EEPROM.end();
 
-  Serial.println("Saved credentials to FLASH");
+  Serial.printf("\n\nSaved credentials to FLASH\n\n");
 }
 
-#ifdef ERASE_FLASH
 /*******************************************************************************
  * Clear data in nonvolatile memory.
  *
@@ -84,6 +83,5 @@ void clearEEPROM() {
   EEPROM.put(3, 0);
   EEPROM.commit();
   EEPROM.end();
-  Serial.println("cleared FLASH");
+  Serial.println("\n\ncleared FLASH\n\n");
 }
-#endif

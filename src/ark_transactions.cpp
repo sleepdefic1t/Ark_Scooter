@@ -5,6 +5,7 @@
 #include "ark_transactions.hpp"
 
 #include <Arduino.h>
+#include <arkClient.h>
 #include <stdlib.h>
 
 #include <string>
@@ -17,7 +18,7 @@
 
 // transaction vars
 char _txAddress[35] = {0};
-char _passphrase[20] = {0};
+char _passphrase[128] = {0};
 uint64_t _fee = 0ULL;
 
 /*******************************************************************************
@@ -48,7 +49,7 @@ void setTransactionVars(const char *address, const char *passphrase,
  *
  * @returns true if node is synced
  ********************************************************************************/
-bool checkArkNodeStatus() {
+bool checkArkNodeStatus(Ark::Client::Connection<Ark::Client::Api> &connection) {
   // get status of Ark node
   const auto nodeStatus = connection.api.node.status();
 
@@ -83,29 +84,37 @@ bool checkArkNodeStatus() {
  *   }
  * }
  ******************************************************************************/
-void getWallet() {
+bool getWallet(Ark::Client::Connection<Ark::Client::Api> &connection) {
   const auto walletGetResponse = connection.api.wallets.get(_txAddress);
 
   const size_t capacity = JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(6) + 200;
   DynamicJsonDocument doc(capacity);
-
   deserializeJson(doc, walletGetResponse.c_str());
   JsonObject data = doc["data"];
-  strcpy(bridgechainWallet.walletBalance, data["balance"]);
-  bridgechainWallet.walletBalance_Uint64 = strtoull(data["balance"], NULL, 10);
-  strcpy(bridgechainWallet.walletNonce, data["nonce"]);
-  bridgechainWallet.walletNonce_Uint64 = strtoull(data["nonce"], NULL, 10);
 
-  Serial.printf("\nGet Wallet: %s", walletGetResponse.c_str());
-  Serial.printf("\nNonce: %s | %" PRIu64 "\n", bridgechainWallet.walletNonce);
-  Serial.printf("\nBalance: %s", bridgechainWallet.walletBalance);
+  if (data["balance"]) {
+    strcpy(bridgechainWallet.walletBalance, data["balance"]);
+    bridgechainWallet.walletBalance_Uint64 =
+        strtoull(data["balance"], NULL, 10);
+    strcpy(bridgechainWallet.walletNonce, data["nonce"]);
+    bridgechainWallet.walletNonce_Uint64 = strtoull(data["nonce"], NULL, 10);
+
+    Serial.printf("\n\nGet Wallet: %s", walletGetResponse.c_str());
+    Serial.printf("\nNonce: %s", bridgechainWallet.walletNonce);
+    Serial.printf("\nBalance: %s\n", bridgechainWallet.walletBalance);
+    return true;
+  } else {
+    Serial.printf("\n\nWallet Ballance is Empty.\n\n");
+    return false;
+  }
 }
 
 /********************************************************************************
  * This routine polls the ARK Node API for the RentalStart custom transaction.
  * It polls once every 8 seconds When polling the API we set the limit.
  ******************************************************************************/
-int search_RentalStartTx() {
+int search_RentalStartTx(
+    Ark::Client::Connection<Ark::Client::Api> &connection) {
   if (millis() - previousUpdateTime_RentalStartSearch >
       UpdateInterval_RentalStartSearch) {  // poll Ark node every 8 seconds for
                                            // a new transaction
@@ -125,10 +134,10 @@ int search_RentalStartTx() {
     const char *asset_sessionId;
     const char *asset_rate;
 
-    if (GetTransaction_RentalStart(_txAddress, searchRXpage, id, amount,
-                                   senderAddress, senderPublicKey, vendorField,
-                                   asset_gps_latitude, asset_gps_longitude,
-                                   asset_sessionId, asset_rate)) {
+    if (GetTransaction_RentalStart(
+            connection, _txAddress, searchRXpage, id, amount, senderAddress,
+            senderPublicKey, vendorField, asset_gps_latitude,
+            asset_gps_longitude, asset_sessionId, asset_rate)) {
       // increment received counter if rental start was received.
       bridgechainWallet.lastRXpage++;
       // store the page in the Flash
@@ -172,10 +181,11 @@ int search_RentalStartTx() {
  *
  * @returns '0' if no transaction exist
  ******************************************************************************/
-int GetReceivedTransaction(const char *const address, int page, const char *&id,
-                           const char *&amount, const char *&senderAddress,
-                           const char *&senderPublicKey,
-                           const char *&vendorField) {
+int GetReceivedTransaction(
+    Ark::Client::Connection<Ark::Client::Api> &connection,
+    const char *const address, int page, const char *&id, const char *&amount,
+    const char *&senderAddress, const char *&senderPublicKey,
+    const char *&vendorField) {
   // this is what we need to assemble:
   // https://radians.nl/api/v2/wallets/TRXA2NUACckkYwWnS9JRkATQA453ukAcD1/transactions/received?page=1&limit=1&orderBy=timestamp:asc
   // query = "?page=1&limit=1&orderBy=timestamp:asc"
@@ -255,7 +265,8 @@ int GetReceivedTransaction(const char *const address, int page, const char *&id,
  * The routine returns the page number of the most recent transaction.
  * Empty wallet will return '0' (NOT YET TESTED)
  ******************************************************************************/
-int getMostRecentReceivedTransaction(int page) {
+int getMostRecentReceivedTransaction(
+    Ark::Client::Connection<Ark::Client::Api> &connection, int page) {
   Serial.println("\n\nHere are all the transactions in a wallet");
   const char *id;               // transaction ID
   const char *amount;           // transactions amount
@@ -263,8 +274,8 @@ int getMostRecentReceivedTransaction(int page) {
   const char *senderPublicKey;  // transaction address of sender
   const char *vendorField;      // vendor field
 
-  while (GetReceivedTransaction(_txAddress, page, id, amount, senderAddress,
-                                senderPublicKey, vendorField)) {
+  while (GetReceivedTransaction(connection, _txAddress, page, id, amount,
+                                senderAddress, senderPublicKey, vendorField)) {
     Serial.printf("\nPage: %s", page);
     Serial.printf("\nVendor Field: %s", vendorField);
     page++;
@@ -294,6 +305,7 @@ int getMostRecentReceivedTransaction(int page) {
  * - asset_rate
  ******************************************************************************/
 int GetTransaction_RentalStart(
+    Ark::Client::Connection<Ark::Client::Api> &connection,
     const char *const address, int page, const char *&id, const char *&amount,
     const char *&senderAddress, const char *&senderPublicKey,
     const char *&vendorField, const char *&asset_gps_latitude,
@@ -378,7 +390,8 @@ int GetTransaction_RentalStart(
  * view rental finish transaction in explorer.
  * https://radians.nl/api/v2/transactions/61ebc45edcc87ca34a50b5e4590e5881dd4148c905bcf8208ad0afd2e7076348
  ******************************************************************************/
-void SendTransaction_RentalFinish() {
+void SendTransaction_RentalFinish(
+    Ark::Client::Connection<Ark::Client::Api> &connection) {
   // If the send fails then we need to unwind this increment.
   bridgechainWallet.walletNonce_Uint64++;
 
@@ -435,7 +448,8 @@ void SendTransaction_RentalFinish() {
 /*******************************************************************************
  * Send a BridgeChain transaction, tailored for a custom network.
  ******************************************************************************/
-void sendBridgechainTransaction() {
+void sendBridgechainTransaction(
+    Ark::Client::Connection<Ark::Client::Api> &connection) {
   // Use the Transaction Builder to make a transaction.
   bridgechainWallet.walletNonce_Uint64++;
 
